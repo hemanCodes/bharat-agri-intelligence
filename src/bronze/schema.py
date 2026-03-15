@@ -16,7 +16,7 @@ wm_tbl = "watermark_tbl"
 metadata = MetaData()
 
 bz_tbl = Table(
-    bz_tbl_name, metadata, 
+    bz_tbl, metadata, 
     Column("id",                    Integer, primary_key=True, autoincrement=True), 
     Column("state",                 String(100)),
     Column("district",              String(100)),
@@ -38,7 +38,7 @@ bz_tbl = Table(
 )
 
 wm_tbl = Table(
-    wm_tbl_name, metadata, 
+    wm_tbl, metadata, 
     Column("pipeline_name",         String(100), primary_key=True), 
     Column("last_offset",           Integer, nullable=False, default=0), 
     Column("total_records",         Integer, nullable=True), 

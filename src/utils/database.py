@@ -1,10 +1,14 @@
 import os
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from utils.logger import log
+from pathlib import Path
+from dotenv import load_dotenv
 
-# Congiguration
-env_path = "../../.env"
+
+# configuration
+ROOT = Path(__file__).resolve().parents[2]
+env_path = ROOT/".env"
 load_dotenv(env_path)
 
 # DB Config
@@ -15,9 +19,9 @@ DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME")
 
 def get_engine():
-    DriverName = 'postgresql+psycopg2'
+    driver_name = 'postgresql+psycopg2'
     conn_str = (
-        f"{DriverName}://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        f"{driver_name}://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
     engine = create_engine(
         conn_str, 
@@ -25,4 +29,5 @@ def get_engine():
         max_overflow = 10,      # extra connections allowed for heavy load
         pool_pre_ping = True    # test connection before use to prevent errors
     )
+    log.info("DB engine created | host=%s | db=%s", DB_HOST, DB_NAME)
     return engine

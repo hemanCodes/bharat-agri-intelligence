@@ -1,3 +1,8 @@
+"""
+bronze layer pipeline orchestrator
+fetches paginated records from API, transform and perform upsert operation into postgres table
+"""
+
 import os
 import requests
 import json
@@ -15,6 +20,8 @@ from tenacity import (
 from src.utils.database import get_engine
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import sessionmaker
+from src.bronze.schema import create_all_tables
+from src.utils.watermark import get_watermark
 
 # configuration
 ROOT = Path(__file__).resolve().parents[2]
@@ -100,7 +107,7 @@ def batch_upsert(session, records: list[dict]):
 def run_pipeline() -> None:
     engine = get_engine()
     create_all_tables(engine)
-    Session - sessionmaker(bind=engine)
+    Session = sessionmaker(bind=engine)
 
     with Session() as session:
         offset          = get_watermark(session, PIPELINE)
