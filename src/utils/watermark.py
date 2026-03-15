@@ -24,6 +24,7 @@ def get_watermark(session: Session, pipeline_name: str) -> int:
     return offset
 
 def set_watermark(session: Session, pipeline_name: str, offset: int, total: int) -> None:
+    # offset += PAGE_LIMIT
     session.execute(
         text(f"""
              INSERT INTO {wm_tbl} (pipeline_name, last_offset, total_records, last_run_at) 

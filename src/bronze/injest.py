@@ -1,7 +1,13 @@
+"""
+bronze layer pipeline orchestrator
+fetches paginated records from API, transform and perform upsert operation into postgres table
+"""
+
 import os
 import requests
 import json
 import time
+from datetime import datetime, timezone
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -15,6 +21,8 @@ from tenacity import (
 from src.utils.database import get_engine
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import sessionmaker
+from src.bronze.schema import create_all_tables, bz_tbl
+from src.utils.watermark import get_watermark, set_watermark
 
 # configuration
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,7 +48,7 @@ REQUEST_DELAY   = 0.5
 def fetch_page(offset: int, limit: int) -> dict:
     params = {
         "api-key":      API_KEY,
-        "resource_id":  RESOURCE_ID, 
+        # "resource_id":  RESOURCE_ID, 
         "format":       FORMAT, 
         "offset":       offset, 
         "limit":        limit
@@ -63,17 +71,19 @@ def transform_records(raw_data: list[dict]) -> list[dict]:
 
     for records in raw_data:
         transformed.append({
-            "state":            records["State"], 
-            "district":         records["District"],
-            "market":           records["Market"],
-            "commodity":        records["Commodity"],
-            "variety":          records["Variety"],
-            "grade":            records["Grade"],
-            "arrival_date":     records["Arrival_Date"], 
-            "min_price":        records["Min_Price"],
-            "max_price":        records["Max_Price"],
-            "modal_price":      records["Modal_Price"],
-            "commodity_code":   records["Commodity_Code"]
+            "state":                records["State"], 
+            "district":             records["District"],
+            "market":               records["Market"],
+            "commodity":            records["Commodity"],
+            "variety":              records["Variety"],
+            "grade":                records["Grade"],
+            "arrival_date":         records["Arrival_Date"], 
+            "min_price":            records["Min_Price"],
+            "max_price":            records["Max_Price"],
+            "modal_price":          records["Modal_Price"],
+            "commodity_code":       records["Commodity_Code"], 
+            "_injested_datetime":   datetime.now(timezone.utc), 
+            "_source_api":          BASE_URL 
         })
     return transformed
 
@@ -85,12 +95,12 @@ def batch_upsert(session, records: list[dict]):
     upsert_stmt = pg_insert(bz_tbl).values(records)
     upsert_stmt = upsert_stmt.on_conflict_do_update(
         constraint = "uq_bz_agmark", 
-        set_ = (
+        set_ = {
             "min_price":        upsert_stmt.excluded.min_price, 
             "max_price":        upsert_stmt.excluded.max_price, 
             "modal_price":      upsert_stmt.excluded.modal_price, 
             "_injested_datetime": upsert_stmt.excluded._injested_datetime
-        ),
+        },
     )
 
     result = session.execute(upsert_stmt)
@@ -100,7 +110,7 @@ def batch_upsert(session, records: list[dict]):
 def run_pipeline() -> None:
     engine = get_engine()
     create_all_tables(engine)
-    Session - sessionmaker(bind=engine)
+    Session = sessionmaker(bind=engine)
 
     with Session() as session:
         offset          = get_watermark(session, PIPELINE)
@@ -110,25 +120,25 @@ def run_pipeline() -> None:
         while True:
             try:
                 data = fetch_page(offset = offset, limit = LIMIT)
-                expect Exception as e
+            except Exception as e:
                 break
         
         # if total is None:
         #     total = int(data.get("total", 0))
 
-        records = data.get("records", [])
-        if not records:
-            break
+            records = data.get("records", [])
+            if not records:
+                break
 
-        rows            = transform_records(records)
-        upserted        = batch_upsert(session, rows)
-        total_upserted  += upserted
-        offset          += LIMIT
+            rows            = transform_records(records)
+            upserted        = batch_upsert(session, rows)
+            total_upserted  += upserted
+            offset          += LIMIT
 
-        set_watermark(session, PIPELINE, offset, total)
+            set_watermark(session, PIPELINE, offset, total)
 
-        if offset>= total:
-            break
+            if offset>= total:
+                break
 
         time.sleep(REQUEST_DELAY)           # gap between API requests to avoid rate limiting
 
