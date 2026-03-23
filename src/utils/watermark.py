@@ -6,7 +6,8 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from src.utils.logger import log
+from src.utils.logger import get_logger
+log = get_logger(__name__)                              # initializing log variable with module name
 
 wm_tbl = "watermark_tbl"
 
@@ -18,7 +19,7 @@ def get_watermark(session: Session, pipeline_name: str) -> int:
 
     offset = row[0] if row else 0
     log.info(
-        "Fetched watermark | pipeline = '%s' | resuming from offset = '%d", 
+        "Fetched watermark | pipeline = '%s' | resuming from offset = '%d'", 
         pipeline_name, offset
     )
     return offset

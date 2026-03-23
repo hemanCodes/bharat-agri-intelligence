@@ -1,9 +1,10 @@
 import os
 
 from sqlalchemy import create_engine
-from utils.logger import log
 from pathlib import Path
 from dotenv import load_dotenv
+from src.utils.logger import get_logger
+log = get_logger(__name__)
 
 
 # configuration
