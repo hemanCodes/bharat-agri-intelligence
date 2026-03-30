@@ -6,7 +6,7 @@ fetches paginated records from API, transform and perform upsert operation into 
 import os
 import requests
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from typing import Any
 
 from pathlib import Path
@@ -36,7 +36,7 @@ API_KEY         = os.getenv("API_KEY")
 FORMAT          = "json"
 LIMIT           = 10000
 FETCH_URL       = f"{BASE_URL}/{RESOURCE_ID}"
-PIPELINE        = "bz_agmark_injest"
+PIPELINE        = "bz_agmark_ingest"
 REQUEST_DELAY   = 0.5
 
 # fetching raw API data
@@ -67,7 +67,7 @@ def fetch_page(offset: int, limit: int) -> dict[str, Any]:
 
 
 # transforming of raw API Data
-def str_to_date(value: str):                                        # to concert arrival date from string to python date type
+def str_to_date(value: str) -> date:                                        # to concert arrival date from string to python date type
     return datetime.strptime(value.strip(), "%d/%m/%Y").date()
 
 def transform_records(raw_data: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
@@ -176,6 +176,10 @@ def update_audit_batch(session, batch_id: int, ingested_records: int) -> None:
     session.commit()
 
 def run_pipeline() -> None:
+    """
+    Orchestrates the bronze-layer ingestion pipeline.
+    Fetches paginated AGMARK data, transforms records, upserts them into PostgreSQL, updates audit metadata.
+    """
     log.info("Pipeline started | pipeline=%s | limit=%d", PIPELINE, LIMIT)
     engine = get_engine()
     create_all_tables(engine)

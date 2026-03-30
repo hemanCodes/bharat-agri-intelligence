@@ -1,6 +1,12 @@
+"""
+Creates and returns SQLAlchemy DB engine using .env credentials
+"""
+
+
 import os
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 from pathlib import Path
 from dotenv import load_dotenv
 from src.utils.logger import get_logger
@@ -19,7 +25,7 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME")
 
-def get_engine():
+def get_engine() -> Engine:
     driver_name = 'postgresql+psycopg2'
     conn_str = (
         f"{driver_name}://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
