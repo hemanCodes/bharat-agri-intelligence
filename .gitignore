@@ -3,3 +3,8 @@ __pycache__/
 .env
 logs/
 node_modules/
+venv/
+Venv/
+env/
+.DS_Store
+.vscode/
